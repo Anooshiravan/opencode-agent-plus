@@ -30,9 +30,11 @@ export default {
       ]
       const text = parts.map((t) => t.trim()).filter(Boolean).join("\n\n")
       if (!text) return
+      // Wrapped so the model does not take the reminder as a user message and reply to it.
+      const wrapped = `<system-reminder>\nAutomatic note, not from the user. Do not reply to it.\n\n${text}\n</system-reminder>`
       // Plugins cannot import opencode's Message class (@opencode/ai), so borrow it from an existing message.
       const Message = event.messages[0].constructor
-      event.messages.push(new Message({ role: "user", content: [{ type: "text", text }] }))
+      event.messages.push(new Message({ role: "user", content: [{ type: "text", text: wrapped }] }))
     })
 
     await ctx.session.hook("http.request", async (event: any) => {

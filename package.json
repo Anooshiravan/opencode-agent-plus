@@ -1,14 +1,20 @@
 {
   "name": "opencode-agent-plus",
   "version": "0.1.0",
-  "description": "Per-agent reminders and request settings from agent frontmatter for OpenCode v2",
+  "description": "OpenCode plugin: per-agent chat_template_kwargs (enable_thinking), sampling settings (temperature, top_p, top_k, min_p) and system reminders from agent frontmatter. For llama.cpp, LiteLLM and OpenAI-compatible providers.",
   "license": "MIT",
   "author": "Anoosh Ahmadi",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Anooshiravan/opencode-agent-plus.git"
   },
-  "keywords": ["opencode", "opencode-plugin", "agent", "frontmatter", "llama.cpp"],
+  "keywords": [
+    "opencode", "opencode-plugin", "opencode-agent", "agent", "agents", "frontmatter",
+    "llama.cpp", "llama-cpp", "litellm", "openai-compatible", "local-llm",
+    "chat_template_kwargs", "chat-template-kwargs", "enable_thinking", "thinking", "reasoning",
+    "temperature", "sampling", "top_p", "top_k", "min_p",
+    "system-reminder", "reminder", "qwen"
+  ],
   "type": "module",
   "exports": {
     ".": "./src/index.ts",

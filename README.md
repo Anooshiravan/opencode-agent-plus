@@ -2,6 +2,10 @@
 
 Per-agent reminders and request settings for [OpenCode](https://opencode.ai) v2, set in the agent's frontmatter.
 
+Set `chat_template_kwargs` (like `enable_thinking`), sampling settings (`temperature`, `top_p`, `top_k`, `min_p`,
+penalties) and a system reminder for each OpenCode agent. Works with llama.cpp, LiteLLM and other OpenAI-compatible
+servers, and with thinking models like Qwen.
+
 OpenCode v2 drops request settings such as `temperature` for OpenAI-compatible providers, and has no per-agent
 reminder. agent-plus reads extra keys from the agent's `.md` file and applies them to every model request.
 
@@ -72,6 +76,9 @@ Before every model request, agent-plus adds one message at the end of the conver
 1. the agent's `reminder`
 2. the agent's `reminder_file`
 3. `reminder.txt` in the project folder, for every agent
+
+The text is wrapped in `<system-reminder>` tags with a note that it is not from the user. Without this, the model may
+take the reminder as your message and reply to it ("Understood. Short replies...") instead of answering you.
 
 The message is only added to the outgoing request, **NOT saved in the chat history**. Every request has exactly one
 reminder at the end, so reminders never pile up.
