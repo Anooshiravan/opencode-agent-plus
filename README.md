@@ -56,6 +56,7 @@ You help the user write and edit text.
 | `repeat_penalty` | number | Request body |
 | `max_completion_tokens` | whole number | Request body |
 | `reasoning_budget_tokens` | whole number | Request body (llama.cpp) |
+| `reasoning_effort` | `none`, `minimal`, `low`, `medium`, `high` or `xhigh` | Request body |
 | `enable_thinking` | `true` or `false` | Request body, under `chat_template_kwargs` |
 
 Names are sent as written. A setting with a wrong value is not sent.

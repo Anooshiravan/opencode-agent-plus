@@ -16,9 +16,14 @@ export const BODY = [
   "repeat_penalty",
   "max_completion_tokens",
   "reasoning_budget_tokens",
+  "reasoning_effort",
 ]
 export const TEMPLATE_KWARGS = ["enable_thinking"]
 const WHOLE_NUMBERS = ["top_k", "max_completion_tokens", "reasoning_budget_tokens"]
+// Settings sent as text, with the values they accept.
+const CHOICES: Record<string, string[]> = {
+  reasoning_effort: ["none", "minimal", "low", "medium", "high", "xhigh"],
+}
 const OPENCODE_KEYS = [
   "description",
   "mode",
@@ -110,10 +115,14 @@ export function misspelledKeys(keys: Record<string, string>) {
 }
 
 // Converts a request setting to its JSON value, or gives an error text when the value is wrong.
-export function requestValue(key: string, value: string): { value: number | boolean } | { error: string } {
+export function requestValue(key: string, value: string): { value: number | boolean | string } | { error: string } {
   if (TEMPLATE_KWARGS.includes(key)) {
     if (value === "true" || value === "false") return { value: value === "true" }
     return { error: `${key}: must be true or false` }
+  }
+  if (key in CHOICES) {
+    if (CHOICES[key].includes(value)) return { value }
+    return { error: `${key}: must be one of ${CHOICES[key].join(", ")}` }
   }
   const number = Number(value)
   if (value === "" || Number.isNaN(number)) return { error: `${key}: must be a number` }
