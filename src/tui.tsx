@@ -11,6 +11,8 @@ function sidebarLines(keys: Record<string, string>) {
   if (keys.enable_thinking === "true" || keys.enable_thinking === "false")
     lines.push(`thinking: ${keys.enable_thinking === "true" ? "on" : "off"}`)
   if (keys.reminder || keys.reminder_file) lines.push("reminder: on")
+  if (keys.on_error_command)
+    lines.push(`on_error_command: ${keys.on_error_command.split("\n")[0].trim()}${keys.on_error_command.includes("\n") ? " …" : ""}`)
   return lines
 }
 

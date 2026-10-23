@@ -15,15 +15,16 @@ Tested with OpenCode 2.0.28 and llama.cpp behind LiteLLM.
 
 ## Install
 
-Add it to the `plugins` list in `opencode.json`:
+Add it to the `plugin` list in `opencode.json`:
 
 ```json
 {
-  "plugins": ["github:Anooshiravan/opencode-agent-plus"]
+  "plugin": ["opencode-agent-plus"]
 }
 ```
 
-Or copy the `src` folder to `~/.config/opencode/plugins/agent-plus/`.
+Or, from GitHub: `"plugin": ["github:Anooshiravan/opencode-agent-plus"]`.
+Agents: follow [AGENTS.md](AGENTS.md).
 
 ## Example
 
@@ -48,6 +49,7 @@ You help the user write and edit text.
 | --- | --- | --- |
 | `reminder` | text, one line or a `\|` block | Added as the last message of every model request |
 | `reminder_file` | path, relative to the agent's `.md` file | Like `reminder`, read from a file |
+| `on_error_command` | shell command, one line or a `\|` block | Run when a request fails with a connection error (server off), then retry |
 | `temperature` | number | Request body |
 | `top_p` | number | Request body |
 | `top_k` | whole number | Request body |
@@ -111,6 +113,21 @@ With no problems, the toast says "agent-plus is loaded".
 
 The session sidebar shows an "Agent-plus" section with the settings of the session's agent. It updates when you
 switch agents or save an agent file.
+
+## Wake the server
+
+`on_error_command` runs a shell command when a model request fails with a connection error (the server is off or
+unreachable), then asks OpenCode to retry after a short delay. HTTP errors (like 500 or 429) never trigger it.
+
+```yaml
+---
+on_error_command: |
+  server-on
+  curl -sf http://litellm:4000/health
+---
+```
+
+It fires once per outage per session: after a request gets through, the next connection error can run it again.
 
 ## Notes
 

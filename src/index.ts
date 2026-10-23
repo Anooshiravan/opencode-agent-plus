@@ -1,5 +1,18 @@
 import path from "node:path"
+import { spawn } from "node:child_process"
+import { appendFileSync, existsSync } from "node:fs"
 import { agentFile, BODY, frontmatter, problems, read, requestValue, TEMPLATE_KWARGS } from "./frontmatter"
+
+// Runs a shell command (single or multi-line) and waits for it to finish.
+// zsh so ~/.zshenv functions and aliases (like server-on) are available; falls back to sh.
+function runShell(command: string) {
+  const shell = existsSync("/bin/zsh") ? "/bin/zsh" : "/bin/sh"
+  return new Promise<void>((resolve) => {
+    const child = spawn(shell, ["-c", command], { stdio: "ignore" })
+    child.on("close", () => resolve())
+    child.on("error", () => resolve())
+  })
+}
 
 // Server half: adds the agent's reminders to every model request and its settings to the request body.
 // The supported frontmatter keys are listed in frontmatter.ts and explained in README.md.
@@ -21,7 +34,31 @@ export default {
       return { file, keys }
     }
 
+    // Debug line, written when AGENT_PLUS_DEBUG points to a log file.
+    const debug = (line: string) => {
+      const file = process.env.AGENT_PLUS_DEBUG
+      if (file) try { appendFileSync(file, `${new Date().toISOString()} ${line}\n`) } catch {}
+    }
+
+    // `on_error_command`: when a request fails because the server is unreachable,
+    // run the agent's command (e.g. wake it up) and ask for a quick retry.
+    const woken = new Set<string>()
+    await ctx.session.hook("retry", async (event: any) => {
+      debug(`retry fired session=${event.sessionID} attempt=${event.attempt} error=${JSON.stringify(event.error)}`)
+      const { keys } = await settings(event.agent)
+      const command = keys.on_error_command
+      if (!command) return
+      // Only connection failures: a real HTTP answer has a status code.
+      if (event.error?.status) return
+      if (woken.has(event.sessionID)) return
+      woken.add(event.sessionID)
+      await runShell(command)
+      event.decision = { retry: true, delay: 1_000 }
+    })
+
     await ctx.session.hook("context", async (event: any) => {
+      // A request got through: allow on_error_command to fire again next time.
+      woken.delete(event.sessionID)
       const { file, keys } = await settings(event.agent)
       const parts = [
         keys.reminder ?? "",

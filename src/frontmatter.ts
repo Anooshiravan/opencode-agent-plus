@@ -36,7 +36,7 @@ const OPENCODE_KEYS = [
   "disabled",
   "request",
 ]
-const KNOWN = new Set([...OPENCODE_KEYS, "reminder", "reminder_file", ...BODY, ...TEMPLATE_KWARGS])
+const KNOWN = new Set([...OPENCODE_KEYS, "reminder", "reminder_file", "on_error_command", ...BODY, ...TEMPLATE_KWARGS])
 
 export const read = (file: string) => readFile(file, "utf8").catch(() => "")
 
