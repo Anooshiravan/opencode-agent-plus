@@ -2,6 +2,7 @@ import path from "node:path"
 import { spawn } from "node:child_process"
 import { appendFileSync, existsSync } from "node:fs"
 import { agentFile, BODY, frontmatter, problems, read, requestValue, TEMPLATE_KWARGS } from "./frontmatter"
+import { isSafe } from "./safecommands"
 
 // Runs a shell command (single or multi-line) and waits for it to finish.
 // zsh so ~/.zshenv functions and aliases (like server-on) are available; falls back to sh.
@@ -54,6 +55,16 @@ export default {
       woken.add(event.sessionID)
       await runShell(command)
       event.decision = { retry: true, delay: 1_000 }
+    })
+
+    // Safe-command auto-allow is on for every agent; an agent turns it off with `safe_commands: none`.
+    // It skips the ask window for read-only tool calls and safe shell commands.
+    // Configured `deny` rules are final and never reach this hook; anything unsafe passes through unchanged.
+    await ctx.permission.hook("evaluate", async (event: any) => {
+      if (event.effect !== "ask" || !event.agent) return
+      const { keys } = await settings(event.agent)
+      if (keys.safe_commands === "none") return
+      if (isSafe(event.action, event.resources ?? [])) event.effect = "allow"
     })
 
     await ctx.session.hook("context", async (event: any) => {

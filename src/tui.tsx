@@ -10,6 +10,7 @@ function sidebarLines(keys: Record<string, string>) {
   const lines = BODY.filter((k) => k in keys && "value" in requestValue(k, keys[k])).map((k) => `${k}: ${keys[k]}`)
   if (keys.enable_thinking === "true" || keys.enable_thinking === "false")
     lines.push(`thinking: ${keys.enable_thinking === "true" ? "on" : "off"}`)
+  lines.push(`safe_commands: ${keys.safe_commands === "none" ? "off" : "on"}`)
   if (keys.reminder || keys.reminder_file) lines.push("reminder: on")
   if (keys.on_error_command)
     lines.push(`on_error_command: ${keys.on_error_command.split("\n")[0].trim()}${keys.on_error_command.includes("\n") ? " …" : ""}`)

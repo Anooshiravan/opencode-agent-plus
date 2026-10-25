@@ -36,7 +36,7 @@ const OPENCODE_KEYS = [
   "disabled",
   "request",
 ]
-const KNOWN = new Set([...OPENCODE_KEYS, "reminder", "reminder_file", "on_error_command", ...BODY, ...TEMPLATE_KWARGS])
+const KNOWN = new Set([...OPENCODE_KEYS, "reminder", "reminder_file", "on_error_command", "safe_commands", ...BODY, ...TEMPLATE_KWARGS])
 
 export const read = (file: string) => readFile(file, "utf8").catch(() => "")
 
@@ -132,6 +132,10 @@ export function requestValue(key: string, value: string): { value: number | bool
 
 // Everything wrong in an agent file: misspelled keys, wrong values and a missing reminder_file.
 export async function problems(file: string, keys: Record<string, string>) {
+  const safeCommands =
+    keys.safe_commands && !["allow", "none"].includes(keys.safe_commands)
+      ? [`safe_commands: must be allow or none`]
+      : []
   const wrong = [...BODY, ...TEMPLATE_KWARGS]
     .filter((k) => k in keys)
     .flatMap((k) => {
@@ -142,5 +146,5 @@ export async function problems(file: string, keys: Record<string, string>) {
     keys.reminder_file && !(await read(path.resolve(path.dirname(file), keys.reminder_file)))
       ? [`reminder_file: ${keys.reminder_file} not found or empty`]
       : []
-  return [...misspelledKeys(keys), ...wrong, ...missing]
+  return [...misspelledKeys(keys), ...wrong, ...missing, ...safeCommands]
 }
