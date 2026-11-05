@@ -36,7 +36,7 @@ const OPENCODE_KEYS = [
   "disabled",
   "request",
 ]
-const KNOWN = new Set([...OPENCODE_KEYS, "reminder", "reminder_file", "on_error_command", "safe_commands", ...BODY, ...TEMPLATE_KWARGS])
+const KNOWN = new Set([...OPENCODE_KEYS, "reminder", "reminder_file", "on_error_command", "safe_commands", "anti_repetition", "max_same_tool", "green_light", "green_light_words", ...BODY, ...TEMPLATE_KWARGS])
 
 export const read = (file: string) => readFile(file, "utf8").catch(() => "")
 
@@ -136,6 +136,18 @@ export async function problems(file: string, keys: Record<string, string>) {
     keys.safe_commands && !["allow", "none"].includes(keys.safe_commands)
       ? [`safe_commands: must be allow or none`]
       : []
+  const antiRepetition =
+    keys.anti_repetition && !["on", "off"].includes(keys.anti_repetition)
+      ? [`anti_repetition: must be on or off`]
+      : []
+  const maxSameTool =
+    keys.max_same_tool && !/^\d+$/.test(keys.max_same_tool)
+      ? [`max_same_tool: must be a whole number`]
+      : []
+  const greenLight =
+    keys.green_light && !["on", "off"].includes(keys.green_light)
+      ? [`green_light: must be on or off`]
+      : []
   const wrong = [...BODY, ...TEMPLATE_KWARGS]
     .filter((k) => k in keys)
     .flatMap((k) => {
@@ -146,5 +158,5 @@ export async function problems(file: string, keys: Record<string, string>) {
     keys.reminder_file && !(await read(path.resolve(path.dirname(file), keys.reminder_file)))
       ? [`reminder_file: ${keys.reminder_file} not found or empty`]
       : []
-  return [...misspelledKeys(keys), ...wrong, ...missing, ...safeCommands]
+  return [...misspelledKeys(keys), ...wrong, ...missing, ...safeCommands, ...antiRepetition, ...maxSameTool, ...greenLight]
 }

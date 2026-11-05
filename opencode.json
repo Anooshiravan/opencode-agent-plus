@@ -1,0 +1,9 @@
+{
+  "permission": {
+    "external_directory": {
+      "/Users/aahmadi/Work/Opencode/**": "allow",
+      "/Work/opencode/**": "allow"
+    }
+  }
+  
+}

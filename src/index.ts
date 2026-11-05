@@ -3,6 +3,9 @@ import { spawn } from "node:child_process"
 import { appendFileSync, existsSync } from "node:fs"
 import { agentFile, BODY, frontmatter, problems, read, requestValue, TEMPLATE_KWARGS } from "./frontmatter"
 import { isSafe } from "./safecommands"
+import { antiRepetition } from "./antirep"
+import { antiLoop } from "./antiloop"
+import { greenLight } from "./greenlight"
 
 // Runs a shell command (single or multi-line) and waits for it to finish.
 // zsh so ~/.zshenv functions and aliases (like server-on) are available; falls back to sh.
@@ -40,6 +43,7 @@ export default {
       const file = process.env.AGENT_PLUS_DEBUG
       if (file) try { appendFileSync(file, `${new Date().toISOString()} ${line}\n`) } catch {}
     }
+    debug(`plugin loaded directory=${directory}`)
 
     // `on_error_command`: when a request fails because the server is unreachable,
     // run the agent's command (e.g. wake it up) and ask for a quick retry.
@@ -66,6 +70,16 @@ export default {
       if (keys.safe_commands === "none") return
       if (isSafe(event.action, event.resources ?? [])) event.effect = "allow"
     })
+
+    // `anti_repetition: on` — interrupt the run when the model's text repeats itself.
+    await antiRepetition(ctx, { settings, debug })
+
+    // `green_light: on` — deny tools unless the user's latest message ends with a go-ahead word.
+    // Registered first so its deny wins and the anti-loop below does not count a denied call.
+    await greenLight(ctx, { settings, debug })
+
+    // `max_same_tool: n` — deny a tool after n calls in a row within one user message.
+    await antiLoop(ctx, { settings, debug })
 
     await ctx.session.hook("context", async (event: any) => {
       // A request got through: allow on_error_command to fire again next time.
