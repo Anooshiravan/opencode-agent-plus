@@ -2,6 +2,7 @@
 import path from "node:path"
 import { createMemo, createResource, createSignal, For, Show } from "solid-js"
 import { agentFile, allAgentFiles, BODY, frontmatter, problems, read, requestValue } from "./frontmatter"
+import { log } from "./log"
 
 // At start, shows a warning toast for every agent .md file with problems, or a "loaded" toast when there are none.
 // Adds an "Agent-plus" section to the sidebar with the agent-plus settings of the session's agent.
@@ -11,7 +12,10 @@ function sidebarLines(keys: Record<string, string>) {
   if (keys.enable_thinking === "true" || keys.enable_thinking === "false")
     lines.push(`thinking: ${keys.enable_thinking === "true" ? "on" : "off"}`)
   lines.push(`safe_commands: ${keys.safe_commands === "none" ? "off" : "on"}`)
-  if (keys.reminder || keys.reminder_file) lines.push("reminder: on")
+  if (keys.anti_repetition === "on") lines.push("anti_repetition: on")
+  if (keys.max_same_tool) lines.push(`max_same_tool: ${keys.max_same_tool}`)
+  if (keys.green_light === "on") lines.push("green_light: on")
+  if (keys.reminder) lines.push("reminder: on")
   if (keys.on_error_command)
     lines.push(`on_error_command: ${keys.on_error_command.split("\n")[0].trim()}${keys.on_error_command.includes("\n") ? " …" : ""}`)
   return lines
@@ -21,11 +25,13 @@ export default {
   id: "agent-plus",
   async setup(ctx: any) {
     const directory = ctx.location?.directory ?? process.cwd()
+    log(`tui: setup directory=${directory} toast=${typeof ctx.ui?.toast?.show}`)
     let warned = false
     for (const file of await allAgentFiles(directory)) {
       const found = await problems(file, frontmatter(await read(file)))
       if (!found.length) continue
       warned = true
+      log(`tui: toast warning file=${file} problems=${found.join("; ")}`)
       ctx.ui.toast.show({
         title: "agent-plus",
         message: `Problems in ${path.basename(file)}:\n${found.join("\n")}`,
@@ -33,7 +39,10 @@ export default {
         duration: 7000,
       })
     }
-    if (!warned) ctx.ui.toast.show({ message: "agent-plus is loaded", variant: "info" })
+    if (!warned) {
+      log("tui: toast loaded")
+      ctx.ui.toast.show({ message: "agent-plus is loaded", variant: "info" })
+    }
 
     const [agentsVersion, setAgentsVersion] = createSignal(0)
     const stop = ctx.data.on("agent.updated", () => setAgentsVersion((v) => v + 1))

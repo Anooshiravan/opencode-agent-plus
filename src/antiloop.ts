@@ -2,11 +2,11 @@
 // user message. The count resets when the user sends a new message, so a
 // long multi-step task is never punished.
 // The count lives in memory only; nothing is sent to the server.
+import { log } from "./log"
+
 export interface AntiLoopOptions {
   /** Reads the agent's frontmatter keys. */
   settings: (agent: string) => Promise<{ keys: Record<string, string> }>
-  /** Optional debug logger. */
-  debug?: (line: string) => void
 }
 
 // Real user messages only: skips injections wrapped in <system-reminder>
@@ -60,7 +60,7 @@ export async function antiLoop(ctx: any, options: AntiLoopOptions) {
     streaks.set(key, { action: event.action, count: 0 })
     event.effect = "deny"
     event.message = `You already used '${event.action}' ${max} times in a row in this message. You are probably stuck in a doom loop. Try something else or report the issue to the user.`
-    options.debug?.(`anti-loop: denied ${event.action} session=${key} count=${count} max=${max}`)
+    log(`antiloop: denied action=${event.action} session=${key} count=${count} max=${max}`)
   })
 }
 

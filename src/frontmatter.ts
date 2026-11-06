@@ -36,7 +36,7 @@ const OPENCODE_KEYS = [
   "disabled",
   "request",
 ]
-const KNOWN = new Set([...OPENCODE_KEYS, "reminder", "reminder_file", "on_error_command", "safe_commands", "anti_repetition", "max_same_tool", "green_light", "green_light_words", ...BODY, ...TEMPLATE_KWARGS])
+const KNOWN = new Set([...OPENCODE_KEYS, "reminder", "on_error_command", "safe_commands", "anti_repetition", "max_same_tool", "green_light", "green_light_words", ...BODY, ...TEMPLATE_KWARGS])
 
 export const read = (file: string) => readFile(file, "utf8").catch(() => "")
 
@@ -130,7 +130,7 @@ export function requestValue(key: string, value: string): { value: number | bool
   return { value: number }
 }
 
-// Everything wrong in an agent file: misspelled keys, wrong values and a missing reminder_file.
+// Everything wrong in an agent file: misspelled keys and wrong values.
 export async function problems(file: string, keys: Record<string, string>) {
   const safeCommands =
     keys.safe_commands && !["allow", "none"].includes(keys.safe_commands)
@@ -154,9 +154,5 @@ export async function problems(file: string, keys: Record<string, string>) {
       const result = requestValue(k, keys[k])
       return "error" in result ? [result.error] : []
     })
-  const missing =
-    keys.reminder_file && !(await read(path.resolve(path.dirname(file), keys.reminder_file)))
-      ? [`reminder_file: ${keys.reminder_file} not found or empty`]
-      : []
-  return [...misspelledKeys(keys), ...wrong, ...missing, ...safeCommands, ...antiRepetition, ...maxSameTool, ...greenLight]
+  return [...misspelledKeys(keys), ...wrong, ...safeCommands, ...antiRepetition, ...maxSameTool, ...greenLight]
 }

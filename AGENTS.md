@@ -28,6 +28,6 @@ Notes:
 
 - The plugin needs no dependencies or build step; opencode loads
   `src/index.ts` (server) and `src/tui.tsx` (TUI) directly.
-- Config is via env vars, set before `opencode service restart`:
-  `AGENT_PLUS_DEBUG` — path to a debug log file (off by default).
+- Debug lines always go to opencode's main log
+  (`~/.local/share/opencode/log/opencode.log`), prefixed `agent-plus:`.
 - Settings live in agent `.md` frontmatter; see README.md for keys.

@@ -1,7 +1,8 @@
-import path from "node:path"
 import { spawn } from "node:child_process"
-import { appendFileSync, existsSync } from "node:fs"
-import { agentFile, BODY, frontmatter, problems, read, requestValue, TEMPLATE_KWARGS } from "./frontmatter"
+import { existsSync } from "node:fs"
+import { agentFile, BODY, frontmatter, problems, requestValue, TEMPLATE_KWARGS } from "./frontmatter"
+import { appendBlock, reminderText } from "./context"
+import { log } from "./log"
 import { isSafe } from "./safecommands"
 import { antiRepetition } from "./antirep"
 import { antiLoop } from "./antiloop"
@@ -33,23 +34,18 @@ export default {
       if (!warned.has(file)) {
         warned.add(file)
         const found = await problems(file, keys)
-        if (found.length) console.warn(`agent-plus: problems in ${file}: ${found.join(", ")}`)
+        if (found.length) log(`server: problems file=${file} found=${found.join("; ")}`)
       }
       return { file, keys }
     }
 
-    // Debug line, written when AGENT_PLUS_DEBUG points to a log file.
-    const debug = (line: string) => {
-      const file = process.env.AGENT_PLUS_DEBUG
-      if (file) try { appendFileSync(file, `${new Date().toISOString()} ${line}\n`) } catch {}
-    }
-    debug(`plugin loaded directory=${directory}`)
+    log(`server: plugin loaded directory=${directory}`)
 
     // `on_error_command`: when a request fails because the server is unreachable,
     // run the agent's command (e.g. wake it up) and ask for a quick retry.
     const woken = new Set<string>()
     await ctx.session.hook("retry", async (event: any) => {
-      debug(`retry fired session=${event.sessionID} attempt=${event.attempt} error=${JSON.stringify(event.error)}`)
+      log(`server: retry fired session=${event.sessionID} attempt=${event.attempt} error=${JSON.stringify(event.error)}`)
       const { keys } = await settings(event.agent)
       const command = keys.on_error_command
       if (!command) return
@@ -72,31 +68,22 @@ export default {
     })
 
     // `anti_repetition: on` — interrupt the run when the model's text repeats itself.
-    await antiRepetition(ctx, { settings, debug })
+    await antiRepetition(ctx, { settings })
 
     // `green_light: on` — deny tools unless the user's latest message ends with a go-ahead word.
     // Registered first so its deny wins and the anti-loop below does not count a denied call.
-    await greenLight(ctx, { settings, debug })
+    await greenLight(ctx, { settings })
 
     // `max_same_tool: n` — deny a tool after n calls in a row within one user message.
-    await antiLoop(ctx, { settings, debug })
+    await antiLoop(ctx, { settings })
 
     await ctx.session.hook("context", async (event: any) => {
       // A request got through: allow on_error_command to fire again next time.
       woken.delete(event.sessionID)
-      const { file, keys } = await settings(event.agent)
-      const parts = [
-        keys.reminder ?? "",
-        keys.reminder_file ? await read(path.resolve(path.dirname(file), keys.reminder_file)) : "",
-        await read(path.join(directory, "reminder.txt")),
-      ]
-      const text = parts.map((t) => t.trim()).filter(Boolean).join("\n\n")
+      const { keys } = await settings(event.agent)
+      const text = await reminderText(directory, keys)
       if (!text) return
-      // Wrapped so the model does not take the reminder as a user message and reply to it.
-      const wrapped = `<system-reminder>\nAutomatic note, not from the user. Do not reply to it.\n\n${text}\n</system-reminder>`
-      // Plugins cannot import opencode's Message class (@opencode/ai), so borrow it from an existing message.
-      const Message = event.messages[0].constructor
-      event.messages.push(new Message({ role: "user", content: [{ type: "text", text: wrapped }] }))
+      appendBlock(event, "system-reminder", text)
     })
 
     await ctx.session.hook("http.request", async (event: any) => {

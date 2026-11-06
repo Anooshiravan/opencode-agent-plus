@@ -4,14 +4,13 @@
 // When the scanner says stop, onHit fires once; the stream itself keeps
 // flowing (opencode's interrupt ends the run, not us).
 import { findRepetition, type RepetitionHit } from "./detect"
+import { log } from "../log"
 
 export interface ScanOptions {
   /** Called at most once, on the first repetition found. */
   onHit: (hit: RepetitionHit) => void
   /** Scan when at least this many new characters arrived since last scan. Default 256. */
   scanEvery?: number
-  /** Optional debug logger. */
-  debug?: (line: string) => void
 }
 
 // Pulls model words out of protocol text: every `"content":"..."` value,
@@ -63,14 +62,14 @@ export function scanResponse(response: Response, options: ScanOptions): Response
     const hit = findRepetition(words)
     if (!hit) return
     fired = true
-    options.debug?.(`anti-repetition: HIT unit=${JSON.stringify(hit.unit)} times=${hit.times} final=${final}`)
+    log(`antirep: hit unit=${JSON.stringify(hit.unit)} times=${hit.times} final=${final}`)
     options.onHit(hit)
     throw new Error(`agent-plus: anti-repetition stopped the reply ("${hit.unit}" repeated ${hit.times} times)`)
   }
 
   const checker = new TransformStream<Uint8Array, Uint8Array>({
     transform(chunk, controller) {
-      if (sinceScan === 0 && words === "" && pending === "") options.debug?.(`anti-repetition: first chunk ${chunk.byteLength} bytes`)
+      if (sinceScan === 0 && words === "" && pending === "") log(`antirep: first chunk bytes=${chunk.byteLength}`)
       if (fired) throw new Error("agent-plus: anti-repetition stopped the reply")
       controller.enqueue(chunk)
       const { text, rest } = extractText(pending + decoder.decode(chunk, { stream: true }))
@@ -81,7 +80,7 @@ export function scanResponse(response: Response, options: ScanOptions): Response
       check(false)
     },
     flush() {
-      options.debug?.(`anti-repetition: stream end words=${words.length} fired=${fired}`)
+      log(`antirep: stream end words=${words.length} fired=${fired}`)
       check(true)
     },
   })
