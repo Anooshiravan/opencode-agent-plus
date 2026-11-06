@@ -178,3 +178,31 @@ not the engine — append the pondering block to the user message.
   - how to phrase the system-prompt note so the model treats `<pondering>`
     like `<system-reminder>` (use it, never reply to it);
   - token budget for the pondering block.
+
+## 11. Open design points (plugin work, 2026-11-06)
+
+Not settled yet; to be discussed one at a time:
+
+1. **Trigger** — after each assistant reply finishes, fire one background
+   ponder request for that session.
+2. **How to run it** — the plugin must send a chat request itself:
+   (a) call the provider endpoint directly, or
+   (b) use opencode's session/prompt API for a hidden throwaway prompt
+   (cleaner, but may pollute history).
+3. **Ponder prompt** — same conversation + a short note: "You are pondering:
+   write ideas, results, speculations about where this conversation is going.
+   Do not answer."
+4. **Injection** — store the result per session; on the user's next message,
+   the `context` hook appends `<pondering>...</pondering>` via `appendBlock`.
+5. **Cancel/stale** — if the user sends while pondering runs, discard the
+   result or keep it for the next turn?
+6. **Frontmatter** — `pondering: on` to enable per agent.
+7. **Budget** — cap the block, e.g. 150–200 tokens.
+
+## 12. Issues
+
+1. **Duplicate pondering (4x)** — the plugin loads in 4 locations, each with
+   its own event listener, so one finished reply starts 4 ponder requests
+   (seen in the debug log: 4 `start` lines per turn). Wasteful; each result
+   overwrites the stored one. Fix options: dedupe across instances (shared
+   file lock per session), or only enable pondering in one load location.

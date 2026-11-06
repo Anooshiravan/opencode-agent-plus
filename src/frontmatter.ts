@@ -36,7 +36,7 @@ const OPENCODE_KEYS = [
   "disabled",
   "request",
 ]
-const KNOWN = new Set([...OPENCODE_KEYS, "reminder", "on_error_command", "safe_commands", "anti_repetition", "max_same_tool", "green_light", "green_light_words", ...BODY, ...TEMPLATE_KWARGS])
+const KNOWN = new Set([...OPENCODE_KEYS, "reminder", "on_error_command", "safe_commands", "anti_repetition", "max_same_tool", "green_light", "green_light_words", "pondering", ...BODY, ...TEMPLATE_KWARGS])
 
 export const read = (file: string) => readFile(file, "utf8").catch(() => "")
 
@@ -148,11 +148,15 @@ export async function problems(file: string, keys: Record<string, string>) {
     keys.green_light && !["on", "off"].includes(keys.green_light)
       ? [`green_light: must be on or off`]
       : []
+  const pondering =
+    keys.pondering && !["on", "off"].includes(keys.pondering)
+      ? [`pondering: must be on or off`]
+      : []
   const wrong = [...BODY, ...TEMPLATE_KWARGS]
     .filter((k) => k in keys)
     .flatMap((k) => {
       const result = requestValue(k, keys[k])
       return "error" in result ? [result.error] : []
     })
-  return [...misspelledKeys(keys), ...wrong, ...safeCommands, ...antiRepetition, ...maxSameTool, ...greenLight]
+  return [...misspelledKeys(keys), ...wrong, ...safeCommands, ...antiRepetition, ...maxSameTool, ...greenLight, ...pondering]
 }

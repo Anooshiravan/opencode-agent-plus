@@ -166,6 +166,14 @@ repeats 5 or more times, the reply is cut and the session is interrupted, instea
 With `max_same_tool: 5`, the same tool call (same tool, same arguments) may repeat at most 5 times in a row.
 The 6th is denied with a message telling the model to stop. The count resets when you send a new message.
 
+## Pondering
+
+With `pondering: on`, when the session goes idle the plugin runs one quiet
+thinking request in it (opencode's transient generate: same conversation, not
+saved to history). The model ponders where the conversation is going. The
+result rides into your next message as a `<pondering>` block, which the model
+uses silently — like the reminder, it never replies to it.
+
 ## Green light
 
 With `green_light: on`, tool calls are denied unless your latest message ends with an approval word (in its last

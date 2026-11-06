@@ -7,6 +7,7 @@ import { isSafe } from "./safecommands"
 import { antiRepetition } from "./antirep"
 import { antiLoop } from "./antiloop"
 import { greenLight } from "./greenlight"
+import { pondering } from "./pondering"
 
 // Runs a shell command (single or multi-line) and waits for it to finish.
 // zsh so ~/.zshenv functions and aliases (like server-on) are available; falls back to sh.
@@ -39,7 +40,7 @@ export default {
       return { file, keys }
     }
 
-    log(`server: plugin loaded directory=${directory}`)
+    log(`server: plugin loaded directory=${directory} pid=${process.pid} module=${import.meta.url}`)
 
     // `on_error_command`: when a request fails because the server is unreachable,
     // run the agent's command (e.g. wake it up) and ask for a quick retry.
@@ -76,6 +77,9 @@ export default {
 
     // `max_same_tool: n` — deny a tool after n calls in a row within one user message.
     await antiLoop(ctx, { settings })
+
+    // `pondering: on` — think during idle time; the result rides into the next user message.
+    await pondering(ctx, { settings })
 
     await ctx.session.hook("context", async (event: any) => {
       // A request got through: allow on_error_command to fire again next time.

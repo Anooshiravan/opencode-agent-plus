@@ -5,7 +5,7 @@ import path from "node:path"
 import { appendFileSync, existsSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 
-const folder = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+export const folder = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const marker = path.join(folder, "debug")
 const file = path.join(folder, "debug.log")
 const MAX_BYTES = 500_000 // cheap size check per line; on pass, rewrite with the last KEEP_LINES
