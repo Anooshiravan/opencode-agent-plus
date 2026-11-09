@@ -16,10 +16,10 @@ function sidebarLines(keys: Record<string, string>) {
   if (keys.anti_repetition === "on") lines.push("anti_repetition: on")
   if (keys.max_same_tool) lines.push(`max_same_tool: ${keys.max_same_tool}`)
   if (keys.green_light === "on") lines.push("green_light: on")
-  if ("pondering" in keys) lines.push(`pondering: ${keys.pondering === "on" ? "on" : "off"}`)
   if (keys.reminder) lines.push("reminder: on")
   if (keys.on_error_command)
     lines.push(`on_error_command: ${keys.on_error_command.split("\n")[0].trim()}${keys.on_error_command.includes("\n") ? " …" : ""}`)
+  if ("pondering" in keys) lines.push(`pondering: ${keys.pondering === "on" ? "on" : "off"}`)
   return lines
 }
 
@@ -76,14 +76,10 @@ export default {
           if (!ls.includes("pondering: on")) return ls
           const st = statuses()[props.sessionID]
           const busy = st?.state === "busy"
-          if (!busy && st?.note) {
-            const out = ls.map((l) => (l === "pondering: on" ? "pondering:" : l))
-            const i = out.indexOf("pondering:")
-            out.splice(i + 1, 0, "---", ...String(st.note).split("\n"))
-            return out
-          }
           const text = busy ? `pondering: ${"⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"[frame() % 10]}` : "pondering: on (idle)"
-          return ls.map((l) => (l === "pondering: on" ? text : l))
+          const out = ls.map((l) => (l === "pondering: on" ? text : l))
+          if (!busy && st?.note) out.push("", "Pondering:", ...String(st.note).split("\n"))
+          return out
         })
         return (
           <Show when={shown().length}>
@@ -91,7 +87,17 @@ export default {
               <text fg={theme.text.base}>
                 <b>Agent-plus</b>
               </text>
-              <For each={shown()}>{(line) => <text fg={theme.text.muted}>{line}</text>}</For>
+              <For each={shown()}>
+                {(line) =>
+                  line === "Pondering:" ? (
+                    <text fg={theme.text.base}>
+                      <b>Pondering:</b>
+                    </text>
+                  ) : (
+                    <text fg={theme.text.muted}>{line}</text>
+                  )
+                }
+              </For>
             </box>
           </Show>
         )
