@@ -74,7 +74,14 @@ export default {
         const shown = createMemo(() => {
           const ls = lines() ?? []
           if (!ls.includes("pondering: on")) return ls
-          const busy = statuses()[props.sessionID] === "busy"
+          const st = statuses()[props.sessionID]
+          const busy = st?.state === "busy"
+          if (!busy && st?.note) {
+            const out = ls.map((l) => (l === "pondering: on" ? "pondering:" : l))
+            const i = out.indexOf("pondering:")
+            out.splice(i + 1, 0, "---", ...String(st.note).split("\n"))
+            return out
+          }
           const text = busy ? `pondering: ${"⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"[frame() % 10]}` : "pondering: on (idle)"
           return ls.map((l) => (l === "pondering: on" ? text : l))
         })

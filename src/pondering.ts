@@ -10,13 +10,13 @@ import { appendBlock } from "./context"
 // Small file the TUI sidebar watches to show pondering: busy/idle.
 // Content is a JSON map: { sessionID: "busy" | "idle" }.
 const statusFile = path.join(folder, "pondering.status")
-function setStatus(sessionID: string, state: "busy" | "idle") {
+function setStatus(sessionID: string, state: "busy" | "idle", note = "") {
   try {
-    const map = JSON.parse(readFileSync(statusFile, "utf8")) as Record<string, string>
-    map[sessionID] = state
+    const map = JSON.parse(readFileSync(statusFile, "utf8")) as Record<string, { state: string; note: string }>
+    map[sessionID] = { state, note }
     writeFileSync(statusFile, JSON.stringify(map))
   } catch {
-    writeFileSync(statusFile, JSON.stringify({ [sessionID]: state }))
+    writeFileSync(statusFile, JSON.stringify({ [sessionID]: { state, note } }))
   }
 }
 
@@ -33,6 +33,21 @@ const NOTE = [
   "2. Trajectory prediction — what will the user likely ask or say next?",
   "3. Preparation — what to check or verify before answering it?",
 ].join("\n")
+
+// Flatten the last 10 user/assistant messages into one text block.
+function flatten(messages: any[]): string {
+  const rows: string[] = []
+  for (const m of messages.slice(-20)) {
+    const role = m.type ?? m.info?.role
+    if (role !== "user" && role !== "assistant") continue
+    const parts = m.data?.content ?? m.content ?? []
+    const text = Array.isArray(parts)
+      ? parts.filter((p: any) => p?.type === "text").map((p: any) => p.text).join("\n")
+      : String(parts)
+    if (text.trim()) rows.push(`${role}: ${text.trim().slice(0, 2000)}`)
+  }
+  return rows.join("\n\n")
+}
 
 export async function pondering(ctx: any, { settings }: { settings: (agent: string) => Promise<{ keys: Record<string, string> }> }) {
   const ready = new Map<string, string>() // sessionID -> pondered text, waiting for the next user message
@@ -72,15 +87,18 @@ export async function pondering(ctx: any, { settings }: { settings: (agent: stri
         }
         log(`pondering: start session=${sessionID} agent=${session.agent}`)
         setStatus(sessionID, "busy")
-        const { text } = await ctx.session.generate({ sessionID, prompt: NOTE })
+        const messages = await ctx.session.context({ sessionID })
+        const transcript = flatten(Array.isArray(messages) ? messages : ((messages as any).data ?? []))
+        const { text } = await ctx.experimental.generate.text({ prompt: `Conversation so far:\n${transcript}\n\n${NOTE}`, model: session.model })
         const trimmed = String(text).trim()
         if (trimmed.startsWith("Retrospective:")) {
           ready.set(sessionID, trimmed)
           log(`pondering: done session=${sessionID} chars=${trimmed.length}`)
+          setStatus(sessionID, "idle", trimmed)
         } else {
           log(`pondering: discarded session=${sessionID} text=${trimmed.slice(0, 80)}`)
+          setStatus(sessionID, "idle")
         }
-        setStatus(sessionID, "idle")
         busy.delete(sessionID)
         done.add(sessionID) // one ponder per user message
       } catch (error) {
@@ -98,6 +116,7 @@ export async function pondering(ctx: any, { settings }: { settings: (agent: stri
     const text = ready.get(event.sessionID)
     if (!text) return
     ready.delete(event.sessionID)
+    setStatus(event.sessionID, "idle") // the sidebar note is consumed with this message
     appendBlock(event, "pondering", text, "Automatic pondering note, not from the user. The assistant pondered during idle time; these are its notes. Do not reply to it, but use it silently when answering.")
   })
 
