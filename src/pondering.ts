@@ -21,17 +21,17 @@ function setStatus(sessionID: string, state: "busy" | "idle", note = "") {
 }
 
 const NOTE = [
-  "This is not a user message. Never reply to it. Output only pondering notes.",
-  "You are pondering during idle time, not answering the user.",
-  "Do not greet, do not answer, just ponder.",
-  "Your output must start with 'Retrospective:' — nothing else.",
-  "",
-  "1. Retrospective — what did the assistant's last 3 answers get wrong",
-  "(not the whole session): guessing, needless tools, ignored instructions,",
-  "padding? Say it in",
-  'second person: "You guessed instead of asking...".',
-  "2. Trajectory prediction — what will the user likely ask or say next?",
-  "3. Preparation — what to check or verify before answering it?",
+  "STOP what you are doing, we need to work better.",
+  "Before we go on, write me a note with exactly these three parts:",
+  "Retrospective: what did your last 3 answers get wrong (not the whole",
+  "session): e.g. guessing, needless tools, ignored instructions, padding? Say it",
+  'in second person: "You guessed instead of asking...".',
+  "Trajectory prediction: what will I likely ask or say next?",
+  "Preparation: things that you should check or verify before answering me.",
+  "Answer now with the real note, not the template. Example of the shape:",
+  "Retrospective: You guessed the fix without checking the log first.",
+  "Trajectory prediction: The user will ask for a commit.",
+  "Preparation: Run git status before committing.",
 ].join("\n")
 
 // Flatten the last 10 user/assistant messages into one text block.
@@ -64,10 +64,18 @@ export async function pondering(ctx: any, { settings }: { settings: (agent: stri
     // event is session.execution.succeeded (payload { sessionID }).
     for await (const event of ctx.event.subscribe({ signal: controller.signal })) {
       const sessionID: string | undefined = event.data?.sessionID
+      // Every plugin copy sees every event. Handle each event exactly once,
+      // in the first copy that gets to it; the rest skip.
+      if (event.id === shared.lastEvent) continue
+      shared.lastEvent = event.id
       if (event.type === "session.inbox.enqueued") {
-        const dup = shared.lastEnqueued === event.id // the other copies see the same event
-        shared.lastEnqueued = event.id
-        log(`pondering: enqueued session=${sessionID}${dup ? " (duplicate)" : ""}`)
+        // The NOTE we sent via session.generate arrives as a user message.
+        // Ignore it so it does not clear `done` and re-arm pondering.
+        if (event.data?.item?.payload?.text === NOTE) {
+          log(`pondering: swallowed own NOTE session=${sessionID}`)
+          continue
+        }
+        log(`pondering: enqueued session=${sessionID}`)
         done.delete(sessionID) // the user sent a message, so done is cleared and the session can ponder again
         continue
       }
@@ -84,17 +92,26 @@ export async function pondering(ctx: any, { settings }: { settings: (agent: stri
         }
         log(`pondering: start session=${sessionID} agent=${session.agent}`)
         setStatus(sessionID, "busy")
-        const messages = await ctx.session.context({ sessionID })
-        const transcript = flatten(Array.isArray(messages) ? messages : ((messages as any).data ?? []))
-        const { text } = await ctx.experimental.generate.text({ prompt: `Conversation so far:\n${transcript}\n\n${NOTE}`, model: session.model })
-        const trimmed = String(text).trim()
+        const { text } = await ctx.session.generate({ sessionID, prompt: NOTE })
+        let trimmed = String(text).trim()
+        if (!trimmed.startsWith("Retrospective:")) {
+          log(`pondering: retry session=${sessionID} text=${trimmed}`)
+          const retry = await ctx.session.generate({
+            sessionID,
+            prompt: [
+              "That was not the note. I am asking you to actually write it now, about our",
+              "real conversation above. Start your reply with \"Retrospective:\" and fill in",
+              "all three parts with specifics from this session.",
+            ].join("\n"),
+          })
+          trimmed = String(retry.text).trim()
+        }
+        setStatus(sessionID, "idle", trimmed) // sidebar shows any reply, gate or not (troubleshooting)
         if (trimmed.startsWith("Retrospective:")) {
           ready.set(sessionID, trimmed)
-          log(`pondering: done session=${sessionID} chars=${trimmed.length}`)
-          setStatus(sessionID, "idle", trimmed)
+          log(`pondering: done session=${sessionID} chars=${trimmed.length} text=${trimmed}`)
         } else {
-          log(`pondering: discarded session=${sessionID} text=${trimmed.slice(0, 80)}`)
-          setStatus(sessionID, "idle")
+          log(`pondering: discarded session=${sessionID} text=${trimmed}`)
         }
         busy.delete(sessionID)
         done.add(sessionID) // one ponder per user message
