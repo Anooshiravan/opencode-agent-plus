@@ -21,11 +21,18 @@ function setStatus(sessionID: string, state: "busy" | "idle") {
 }
 
 const NOTE = [
+  "This is not a user message. Never reply to it. Output only pondering notes.",
   "You are pondering during idle time, not answering the user.",
-  "Write a short block of ideas, results and speculations about where this",
-  "conversation is going and what the assistant should prepare for the",
-  "user's likely next message. Do not greet, do not answer, just ponder.",
-].join(" ")
+  "Do not greet, do not answer, just ponder.",
+  "Your output must start with 'Retrospective:' — nothing else.",
+  "",
+  "1. Retrospective — what did the assistant's last 3 answers get wrong",
+  "(not the whole session): guessing, needless tools, ignored instructions,",
+  "padding? Say it in",
+  'second person: "You guessed instead of asking...".',
+  "2. Trajectory prediction — what will the user likely ask or say next?",
+  "3. Preparation — what to check or verify before answering it?",
+].join("\n")
 
 export async function pondering(ctx: any, { settings }: { settings: (agent: string) => Promise<{ keys: Record<string, string> }> }) {
   const ready = new Map<string, string>() // sessionID -> pondered text, waiting for the next user message
@@ -67,9 +74,11 @@ export async function pondering(ctx: any, { settings }: { settings: (agent: stri
         setStatus(sessionID, "busy")
         const { text } = await ctx.session.generate({ sessionID, prompt: NOTE })
         const trimmed = String(text).trim()
-        if (trimmed) {
+        if (trimmed.startsWith("Retrospective:")) {
           ready.set(sessionID, trimmed)
           log(`pondering: done session=${sessionID} chars=${trimmed.length}`)
+        } else {
+          log(`pondering: discarded session=${sessionID} text=${trimmed.slice(0, 80)}`)
         }
         setStatus(sessionID, "idle")
         busy.delete(sessionID)
@@ -89,7 +98,7 @@ export async function pondering(ctx: any, { settings }: { settings: (agent: stri
     const text = ready.get(event.sessionID)
     if (!text) return
     ready.delete(event.sessionID)
-    appendBlock(event, "pondering", text)
+    appendBlock(event, "pondering", text, "Automatic pondering note, not from the user. The assistant pondered during idle time; these are its notes. Do not reply to it, but use it silently when answering.")
   })
 
   return () => controller.abort()

@@ -29,6 +29,12 @@ Add it to the `plugin` list in `opencode.json`:
 Or, from GitHub: `"plugin": ["github:Anooshiravan/opencode-agent-plus"]`.
 Agents: follow [AGENTS.md](AGENTS.md).
 
+To update an already-installed plugin, copy all files to the plugin folder:
+
+```bash
+rsync -a --exclude=.git /Users/aahmadi/Work/AI/opencode-agent-plus/ /Users/aahmadi/.config/opencode/plugins/opencode-agent-plus/
+```
+
 ## Example
 
 ```markdown
