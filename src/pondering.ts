@@ -50,14 +50,11 @@ function flatten(messages: any[]): string {
 }
 
 export async function pondering(ctx: any, { settings }: { settings: (agent: string) => Promise<{ keys: Record<string, string> }> }) {
-  const ready = new Map<string, string>() // sessionID -> pondered text, waiting for the next user message
-  // The server loads this plugin once per open folder, all in one process, so
-  // every copy would ponder the same session. They share these two sets
-  // through globalThis: the first copy to claim a session ponders, the rest
-  // see the claim and skip. Cleared when the user sends the next message.
   const shared = ((globalThis as any).__agentPlusPondering ??= { busy: new Set<string>(), done: new Set<string>() })
+  shared.ready ??= new Map<string, string>() // backfill when an older load created the object
   const busy = shared.busy as Set<string> // a ponder is running for this session
   const done = shared.done as Set<string> // this session already pondered this turn
+  const ready = shared.ready as Map<string, string> // shared: any copy's hook can inject the note
 
   const controller = new AbortController()
   log(`pondering: listener started`)
