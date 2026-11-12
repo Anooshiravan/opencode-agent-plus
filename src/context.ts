@@ -21,6 +21,20 @@ export function appendBlock(event: any, tag: string, text: string, header = "Aut
   event.messages.splice(i, 0, block)
 }
 
+// Real user messages only: skips injections wrapped in <system-reminder>
+// (ours and other plugins').
+export function realUserTexts(messages: any[]): string[] {
+  const texts: string[] = []
+  for (const m of messages) {
+    if (m.role !== "user") continue
+    const parts = m.content ?? m.parts ?? []
+    const text = parts.map((p: any) => p.text ?? "").join("")
+    if (text.trimStart().startsWith("<system-reminder>")) continue
+    texts.push(text)
+  }
+  return texts
+}
+
 // The reminder text for a request: the agent file's `reminder:` first,
 // then AGENTS.md's, then off ("").
 export async function reminderText(directory: string, keys: Record<string, string>) {

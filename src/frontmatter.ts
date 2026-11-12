@@ -36,7 +36,7 @@ const OPENCODE_KEYS = [
   "disabled",
   "request",
 ]
-const KNOWN = new Set([...OPENCODE_KEYS, "reminder", "on_error_command", "safe_commands", "anti_repetition", "max_same_tool", "green_light", "green_light_words", "pondering", ...BODY, ...TEMPLATE_KWARGS])
+const KNOWN = new Set([...OPENCODE_KEYS, "reminder", "on_error_command", "safe_commands", "max_word_repeat", "max_tool_repeat", "manual_green_light", "manual_green_light_words", "auto_green_light", "pondering", ...BODY, ...TEMPLATE_KWARGS])
 
 export const read = (file: string) => readFile(file, "utf8").catch(() => "")
 
@@ -136,17 +136,21 @@ export async function problems(file: string, keys: Record<string, string>) {
     keys.safe_commands && !["allow", "none"].includes(keys.safe_commands)
       ? [`safe_commands: must be allow or none`]
       : []
-  const antiRepetition =
-    keys.anti_repetition && !["on", "off"].includes(keys.anti_repetition)
-      ? [`anti_repetition: must be on or off`]
+  const maxWordRepeat =
+    keys.max_word_repeat && !["on", "off"].includes(keys.max_word_repeat)
+      ? [`max_word_repeat: must be on or off`]
       : []
-  const maxSameTool =
-    keys.max_same_tool && !/^\d+$/.test(keys.max_same_tool)
-      ? [`max_same_tool: must be a whole number`]
+  const maxToolRepeat =
+    keys.max_tool_repeat && !/^\d+$/.test(keys.max_tool_repeat)
+      ? [`max_tool_repeat: must be a whole number`]
       : []
   const greenLight =
-    keys.green_light && !["on", "off"].includes(keys.green_light)
-      ? [`green_light: must be on or off`]
+    keys.manual_green_light && !["on", "off"].includes(keys.manual_green_light)
+      ? [`manual_green_light: must be on or off`]
+      : []
+  const autoGreenLight =
+    keys.auto_green_light && !["on", "off"].includes(keys.auto_green_light)
+      ? [`auto_green_light: must be on or off`]
       : []
   const pondering =
     keys.pondering && !["on", "off"].includes(keys.pondering)
@@ -158,5 +162,5 @@ export async function problems(file: string, keys: Record<string, string>) {
       const result = requestValue(k, keys[k])
       return "error" in result ? [result.error] : []
     })
-  return [...misspelledKeys(keys), ...wrong, ...safeCommands, ...antiRepetition, ...maxSameTool, ...greenLight, ...pondering]
+  return [...misspelledKeys(keys), ...wrong, ...safeCommands, ...maxWordRepeat, ...maxToolRepeat, ...greenLight, ...autoGreenLight, ...pondering]
 }

@@ -18,21 +18,27 @@ Tested with OpenCode 2.2.0 and llama.cpp behind LiteLLM.
 
 ## Install
 
-Add it to the `plugin` list in `opencode.json`:
+Copy the files into the global plugins folder (plugins there load automatically):
+
+```bash
+rsync -a --exclude=.git <REPO_DIR>/ ~/.config/opencode/plugins/opencode-agent-plus/
+```
+
+Or add it to the `plugins` list in `opencode.json`:
 
 ```json
 {
-  "plugin": ["opencode-agent-plus"]
+  "plugins": ["opencode-agent-plus"]
 }
 ```
 
-Or, from GitHub: `"plugin": ["github:Anooshiravan/opencode-agent-plus"]`.
+Or, from GitHub: `"plugins": ["github:Anooshiravan/opencode-agent-plus"]`.
 Agents: follow [AGENTS.md](AGENTS.md).
 
 To update an already-installed plugin, copy all files to the plugin folder:
 
 ```bash
-rsync -a --exclude=.git /Users/aahmadi/Work/AI/opencode-agent-plus/ /Users/aahmadi/.config/opencode/plugins/opencode-agent-plus/
+rsync -a --exclude=.git <REPO_DIR>/ ~/.config/opencode/plugins/opencode-agent-plus/
 ```
 
 ## Example
@@ -56,13 +62,14 @@ You help the user write and edit text.
 
 | Key | Value | Effect |
 | --- | --- | --- |
-| `reminder` | `concise`, `creative`, `off`, or text (one line or a `\|` block) | Preset or custom reminder, added as the last message of every model request |
+| `reminder` | `concise`, `ultra-concise`, `creative`, `off`, or text (one line or a `\|` block) | Preset or custom reminder, added as the last message of every model request |
 | `on_error_command` | shell command, one line or a `\|` block | Run when a request fails with a connection error (server off), then retry |
 | `safe_commands` | `none` (default: on) | Turn safe-command auto-allow off for this agent |
 | `anti_repetition` | `on` or `off` (default: off) | Stop the reply when the model repeats the same text |
 | `max_same_tool` | whole number | Max times the same tool call may repeat in a row |
-| `green_light` | `on` or `off` (default: off) | Tools run only when your message ends with an approval word |
-| `green_light_words` | comma-separated words | The approval words for `green_light` |
+| `manual_green_light` | `on` or `off` (default: off) | Tools run only when your message ends with an approval word |
+| `manual_green_light_words` | comma-separated words | The approval words for `manual_green_light` |
+| `auto_green_light` | `on` or `off` (default: off) | The model checks itself before the first tool call of each turn |
 | `temperature` | number | Request body |
 | `top_p` | number | Request body |
 | `top_k` | whole number | Request body |
@@ -92,7 +99,7 @@ Before every model request, agent-plus adds one message at the end of the conver
 1. the agent's `reminder`
 2. the `reminder` from `AGENTS.md` in the project folder, for every agent
 
-`reminder` takes a preset name (`concise`, `creative`, `off`) for wording held in
+`reminder` takes a preset name (`concise`, `ultra-concise`, `creative`, `off`) for wording held in
 the plugin, or your own text (more than 3 words). A short unknown value means
 `off`.
 
@@ -182,9 +189,12 @@ uses silently — like the reminder, it never replies to it.
 
 ## Green light
 
-With `green_light: on`, tool calls are denied unless your latest message ends with an approval word (in its last
+With `manual_green_light: on`, tool calls are denied unless your latest message ends with an approval word (in its last
 3 words), like "run the tests, go". Deny messages tell you to approve or answer without tools. The `read` tool
-is always allowed. Set your own words with `green_light_words: yes, do, go`.
+is always allowed. Set your own words with `manual_green_light_words: yes, do, go`.
+
+With `auto_green_light: on`, the model checks itself before the first tool call of each turn: it must allow the call
+and state its plan, or explain why it cannot. The check fires once per turn and is not saved in the chat history.
 
 ## Notes
 

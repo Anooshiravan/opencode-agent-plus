@@ -1,17 +1,16 @@
 # Install (for agents)
 
-1. Register the plugin in `~/.config/opencode/opencode.json` — add to the
-   `plugin` array:
+1. Copy the repo into the global plugins folder; plugins there load
+   automatically, no config entry needed:
 
-   ```json
-   { "plugin": ["opencode-agent-plus"] }
+   ```bash
+   rsync -a --exclude=.git <THIS_REPO_DIR>/ ~/.config/opencode/plugins/opencode-agent-plus/
    ```
 
-   Before the npm publish, or for local development, use the absolute
-   path of this repo instead:
+   Or add it to the `plugins` array in `~/.config/opencode/opencode.json`:
 
    ```json
-   { "plugin": ["/ABSOLUTE/PATH/TO/THIS/REPO"] }
+   { "plugins": ["opencode-agent-plus"] }
    ```
 
 2. Restart the opencode server so the plugin loads:
@@ -23,6 +22,20 @@
 3. Verify: start a session with an agent whose frontmatter sets a
    setting (e.g. `temperature: 1`). The sidebar shows an "Agent-plus"
    section, and a toast reports loaded or lists frontmatter problems.
+
+# Deploy local changes (for agents)
+
+Copy the repo into the live plugin directory:
+
+```bash
+rsync -a --exclude=.git <THIS_REPO_DIR>/ ~/.config/opencode/plugins/opencode-agent-plus/
+```
+
+Then restart the server (the user runs this, do not run it yourself):
+
+```bash
+opencode service restart
+```
 
 Notes:
 

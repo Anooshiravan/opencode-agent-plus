@@ -4,22 +4,32 @@ import { readFileSync, unwatchFile, watchFile } from "node:fs"
 import { createEffect, createMemo, createResource, createSignal, For, Show } from "solid-js"
 import { agentFile, allAgentFiles, BODY, frontmatter, problems, read, requestValue } from "./frontmatter"
 import { folder, log } from "./log"
+import { reminderPreset } from "./presets"
 
 // At start, shows a warning toast for every agent .md file with problems, or a "loaded" toast when there are none.
 // Adds an "Agent-plus" section to the sidebar with the agent-plus settings of the session's agent.
 // The sidebar reads the agent file again when the session's agent changes or opencode reports an agent file change.
+const onOff = (v: string | undefined, on = "on") => (v === on ? "on" : "off")
+
 function sidebarLines(keys: Record<string, string>) {
-  const lines = BODY.filter((k) => k in keys && "value" in requestValue(k, keys[k])).map((k) => `${k}: ${keys[k]}`)
+  const lines: string[] = []
+  const reminder = reminderPreset(keys.reminder ?? "")
+  lines.push(reminder ? `reminder: ${keys.reminder}` : "reminder: off")
+  lines.push(`safe_commands: ${keys.safe_commands === "none" ? "off" : "on"}`)
+  lines.push(`max_word_repeat: ${onOff(keys.max_word_repeat)}`)
+  lines.push(`max_tool_repeat: ${keys.max_tool_repeat || "off"}`)
+  lines.push(
+    `on_error_command: ${keys.on_error_command ? keys.on_error_command.split("\n")[0].trim() + (keys.on_error_command.includes("\n") ? " …" : "") : "off"}`,
+  )
+  lines.push(`manual_green_light: ${onOff(keys.manual_green_light)}`)
+  lines.push(`auto_green_light: ${onOff(keys.auto_green_light)}`)
+  lines.push(`pondering: ${onOff(keys.pondering)}`)
+  if ("reasoning_effort" in keys && "value" in requestValue("reasoning_effort", keys.reasoning_effort))
+    lines.push(`reasoning_effort: ${keys.reasoning_effort}`)
+  for (const k of BODY)
+    if (k !== "reasoning_effort" && k in keys && "value" in requestValue(k, keys[k])) lines.push(`${k}: ${keys[k]}`)
   if (keys.enable_thinking === "true" || keys.enable_thinking === "false")
     lines.push(`thinking: ${keys.enable_thinking === "true" ? "on" : "off"}`)
-  lines.push(`safe_commands: ${keys.safe_commands === "none" ? "off" : "on"}`)
-  if (keys.anti_repetition === "on") lines.push("anti_repetition: on")
-  if (keys.max_same_tool) lines.push(`max_same_tool: ${keys.max_same_tool}`)
-  if (keys.green_light === "on") lines.push("green_light: on")
-  if (keys.reminder) lines.push("reminder: on")
-  if (keys.on_error_command)
-    lines.push(`on_error_command: ${keys.on_error_command.split("\n")[0].trim()}${keys.on_error_command.includes("\n") ? " …" : ""}`)
-  if ("pondering" in keys) lines.push(`pondering: ${keys.pondering === "on" ? "on" : "off"}`)
   return lines
 }
 

@@ -139,7 +139,7 @@ function safeSsh(args: string[]): boolean {
 }
 
 // Is this permission event safe to allow? `action` and `resources` come from the hook event.
-export function isSafe(action: string, resources: readonly string[]): boolean {
+export function isSafeToolCall(action: string, resources: readonly string[]): boolean {
   if (SAFE_ACTIONS.has(action)) return true
   if (action !== "shell") return false
   // The scanner splits compound commands into several resources: every part must be safe.

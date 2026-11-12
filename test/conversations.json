@@ -1,0 +1,5 @@
+{
+  "greenlight-ask": [{ "role": "user", "text": "check the config file" }],
+  "greenlight-go": [{ "role": "user", "text": "run the tests, go" }],
+  "loop-run": [{ "role": "user", "text": "list the files" }]
+}

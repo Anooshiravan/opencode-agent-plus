@@ -21,33 +21,17 @@ function setStatus(sessionID: string, state: "busy" | "idle", note = "") {
 }
 
 const NOTE = [
-  "STOP what you are doing, we need to work better.",
-  "Before we go on, write me a note with exactly these three parts:",
-  "Retrospective: what did your last 3 answers get wrong (not the whole",
-  "session): e.g. guessing, needless tools, ignored instructions, padding? Say it",
-  'in second person: "You guessed instead of asking...".',
-  "Trajectory prediction: what will I likely ask or say next?",
-  "Preparation: things that you should check or verify before answering me.",
-  "Answer now with the real note, not the template. Example of the shape:",
-  "Retrospective: You guessed the fix without checking the log first.",
-  "Trajectory prediction: The user will ask for a commit.",
-  "Preparation: Run git status before committing.",
+  "This is a pondering request (like a chess engine's permanent brain) to think ahead and improve future replies.",
+  "Read your last reply only. If there is nothing useful to note (a greeting, a yes/no answer), reply with exactly: SKIP",
+  "Otherwise write a short note, one line per point, only what applies.",
+  "1. Claims you did not verify: quote each one, if any.",
+  "2. Anything left unfinished.",
+  "3. What the user will likely ask next.",
+  "4. One thing to check first, and how.",
+  "5. Did you understand the user's intent, or miss something?",
+  "6. Anything you are stuck on, or want to ask the user.",
+  "7. Any other useful note.",
 ].join("\n")
-
-// Flatten the last 10 user/assistant messages into one text block.
-function flatten(messages: any[]): string {
-  const rows: string[] = []
-  for (const m of messages.slice(-20)) {
-    const role = m.type ?? m.info?.role
-    if (role !== "user" && role !== "assistant") continue
-    const parts = m.data?.content ?? m.content ?? []
-    const text = Array.isArray(parts)
-      ? parts.filter((p: any) => p?.type === "text").map((p: any) => p.text).join("\n")
-      : String(parts)
-    if (text.trim()) rows.push(`${role}: ${text.trim().slice(0, 2000)}`)
-  }
-  return rows.join("\n\n")
-}
 
 export async function pondering(ctx: any, { settings }: { settings: (agent: string) => Promise<{ keys: Record<string, string> }> }) {
   const shared = ((globalThis as any).__agentPlusPondering ??= { busy: new Set<string>(), done: new Set<string>() })
@@ -94,20 +78,9 @@ export async function pondering(ctx: any, { settings }: { settings: (agent: stri
         setStatus(sessionID, "busy")
         const { text } = await ctx.session.generate({ sessionID, prompt: NOTE })
         let trimmed = String(text).trim()
-        if (!trimmed.startsWith("Retrospective:")) {
-          log(`pondering: retry session=${sessionID} text=${trimmed}`)
-          const retry = await ctx.session.generate({
-            sessionID,
-            prompt: [
-              "That was not the note. I am asking you to actually write it now, about our",
-              "real conversation above. Start your reply with \"Retrospective:\" and fill in",
-              "all three parts with specifics from this session.",
-            ].join("\n"),
-          })
-          trimmed = String(retry.text).trim()
-        }
-        setStatus(sessionID, "idle", trimmed) // sidebar shows any reply, gate or not (troubleshooting)
-        if (trimmed.startsWith("Retrospective:")) {
+        if (trimmed === "SKIP") trimmed = "" // the model found nothing worth noting
+        setStatus(sessionID, "idle", trimmed) // sidebar shows the raw note (troubleshooting)
+        if (trimmed) {
           ready.set(sessionID, trimmed)
           log(`pondering: done session=${sessionID} chars=${trimmed.length} text=${trimmed}`)
         } else {
