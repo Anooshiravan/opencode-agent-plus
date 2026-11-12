@@ -9,17 +9,18 @@ const GLOBAL_DIR =
   path.join(process.env.XDG_CONFIG_HOME || path.join(homedir(), ".config"), "opencode")
 export const BODY = [
   "temperature",
-  "top_p",
-  "top_k",
-  "min_p",
-  "presence_penalty",
-  "repeat_penalty",
   "max_completion_tokens",
   "reasoning_budget_tokens",
   "reasoning_effort",
 ]
 export const TEMPLATE_KWARGS = ["enable_thinking"]
 const WHOLE_NUMBERS = ["top_k", "max_completion_tokens", "reasoning_budget_tokens"]
+// Safe value ranges for the sampling settings.
+const RANGES: Record<string, [number, number]> = {
+  temperature: [0.2, 1.4],
+  max_completion_tokens: [1024, 32768],
+  reasoning_budget_tokens: [1024, 8192],
+}
 // Settings sent as text, with the values they accept.
 const CHOICES: Record<string, string[]> = {
   reasoning_effort: ["none", "minimal", "low", "medium", "high", "xhigh"],
@@ -127,6 +128,8 @@ export function requestValue(key: string, value: string): { value: number | bool
   const number = Number(value)
   if (value === "" || Number.isNaN(number)) return { error: `${key}: must be a number` }
   if (WHOLE_NUMBERS.includes(key) && !Number.isInteger(number)) return { error: `${key}: must be a whole number` }
+  const range = RANGES[key]
+  if (range && (number < range[0] || number > range[1])) return { error: `${key}: must be between ${range[0]} and ${range[1]}` }
   return { value: number }
 }
 

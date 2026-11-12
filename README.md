@@ -41,6 +41,24 @@ To update an already-installed plugin, copy all files to the plugin folder:
 rsync -a --exclude=.git <REPO_DIR>/ ~/.config/opencode/plugins/opencode-agent-plus/
 ```
 
+## Offline package
+
+The plugin has no build step and no own dependencies (the `peerDependencies` are provided by OpenCode itself). To move it to a machine with no internet:
+
+1. Package the files:
+
+   Name the package `opencode-agent-plus-<version_number>.tgz`, where `<version_number>` is the `version` in `package.json`:
+
+   ```bash
+   tar czf opencode-agent-plus-<version_number>.tgz -C <REPO_DIR> --exclude=.git --exclude=node_modules --exclude=local --exclude=screenshot.png .
+   ```
+
+2. On the offline machine, extract into `~/.config/opencode/plugins/opencode-agent-plus/`.
+
+3. Restart: `opencode service restart`.
+
+No `opencode.json` entry is needed; plugins in that folder load automatically.
+
 ## Example
 
 ```markdown
@@ -75,7 +93,8 @@ You help the user write and edit text.
 | `top_k` | whole number | Request body |
 | `min_p` | number | Request body |
 | `presence_penalty` | number | Request body |
-| `repeat_penalty` | number | Request body |
+| `repeat_penalty` | number | Request body (llama.cpp) |
+| `repetition_penalty` | number | Request body (vLLM, HF) |
 | `max_completion_tokens` | whole number | Request body |
 | `reasoning_budget_tokens` | whole number | Request body (llama.cpp) |
 | `reasoning_effort` | `none`, `minimal`, `low`, `medium`, `high` or `xhigh` | Request body |

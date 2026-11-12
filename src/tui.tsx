@@ -26,8 +26,12 @@ function sidebarLines(keys: Record<string, string>) {
   lines.push(`pondering: ${onOff(keys.pondering)}`)
   if ("reasoning_effort" in keys && "value" in requestValue("reasoning_effort", keys.reasoning_effort))
     lines.push(`reasoning_effort: ${keys.reasoning_effort}`)
-  for (const k of BODY)
-    if (k !== "reasoning_effort" && k in keys && "value" in requestValue(k, keys[k])) lines.push(`${k}: ${keys[k]}`)
+  for (const k of BODY) {
+    if (k === "reasoning_effort" || !(k in keys)) continue
+    const result = requestValue(k, keys[k])
+    if ("value" in result) lines.push(`${k}: ${keys[k]}`)
+    else lines.push(`${k}: ${keys[k]} (ERR: out of range!)`)
+  }
   if (keys.enable_thinking === "true" || keys.enable_thinking === "false")
     lines.push(`thinking: ${keys.enable_thinking === "true" ? "on" : "off"}`)
   return lines

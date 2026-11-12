@@ -1,28 +1,21 @@
-// Request-body settings: adds the agent's sampling settings to every model request.
+// Request settings: adds the agent's sampling settings to the model request.
 // Supported keys are listed in frontmatter.ts; a setting with a wrong value is not sent.
-import { BODY, requestValue, TEMPLATE_KWARGS } from "./frontmatter"
+import { BODY, requestValue } from "./frontmatter"
+import { log } from "./log"
 
 export interface HttpRequestOptions {
   /** Reads the agent's frontmatter keys. */
   settings: (agent: string) => Promise<{ keys: Record<string, string> }>
 }
 
-export async function httpRequest(ctx: any, options: HttpRequestOptions) {
-  await ctx.session.hook("http.request", async (event: any) => {
-    const { keys } = await options.settings(event.agent)
-    const pick = (names: string[]) =>
-      Object.fromEntries(
-        names.flatMap((k) => {
-          if (!(k in keys)) return []
-          const result = requestValue(k, keys[k])
-          return "value" in result ? [[k, result.value]] : []
-        }),
-      )
-    const extra = pick(BODY)
-    const kwargs = pick(TEMPLATE_KWARGS)
-    if (!Object.keys(extra).length && !Object.keys(kwargs).length) return
-    const body = await event.request.clone().json()
-    if (Object.keys(kwargs).length) extra.chat_template_kwargs = { ...body.chat_template_kwargs, ...kwargs }
-    event.request = new Request(event.request, { body: JSON.stringify({ ...body, ...extra }) })
-  })
+export async function httpRequest(event: any, options: HttpRequestOptions) {
+  const { keys } = await options.settings(event.agent)
+  const extra: Record<string, number | string> = {}
+  for (const k of BODY) {
+    if (!(k in keys)) continue
+    const result = requestValue(k, keys[k])
+    if ("value" in result) extra[k] = result.value as number | string
+  }
+  log(`httprequest: agent=${event.agent} extra=${JSON.stringify(extra)}`)
+  event.options = { ...event.options, ...extra }
 }

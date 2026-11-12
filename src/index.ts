@@ -64,12 +64,10 @@ export default {
       // A request got through: allow on_error_command to fire again next time.
       allowWake(event.sessionID)
       const { keys } = await settings(event.agent)
+      await httpRequest(event, { settings })
       const text = await reminderText(directory, keys)
       if (!text) return
       appendBlock(event, "system-reminder", text)
     })
-
-    // Request-body settings (temperature, etc.).
-    await httpRequest(ctx, { settings })
   },
 }
