@@ -10,15 +10,25 @@ export function appendBlock(event: any, tag: string, text: string, header = "Aut
   const wrapped = `<${tag}>\n${header}\n\n${text}\n</${tag}>`
   const Message = event.messages[0].constructor
   const block = new Message({ role: "user", content: [{ type: "text", text: wrapped }] })
-  // Insert before the user's last message, not after it.
-  let i = event.messages.length
-  if (i > 0 && event.messages[i - 1].role === "user") {
-    i--
-    // Mark the real user message so it stands out from the injected blocks.
-    const part = event.messages[i].content?.[0]
-    if (part?.type === "text" && !part.text.startsWith("User:")) part.text = `User:\n${part.text}`
-  }
-  event.messages.splice(i, 0, block)
+  // NEVER change this order: the throwaway block must stay AFTER the user's
+  // last message, never before it.
+  //
+  // Why: the inference server we use, Strata, caches the conversation with
+  // checkpoints so the next request only reads the new text. Strata saves a
+  // checkpoint at the start of the last turn and reuses it next time.
+  //
+  // Strata has a flag, --tail-role-token, meant for a throwaway turn the
+  // server itself appends (a reasoning-effort note): it tells the engine to
+  // put the checkpoint BEFORE that turn, so the changing text never poisons
+  // the cache. With our reminder injected before the user message, the engine
+  // treated it as that throwaway turn and moved the checkpoint before it -
+  // but unlike the effort note, our block pushes the real user message and
+  // reply past the checkpoint, so every turn re-read them (reuse stuck, prefill
+  // growing each turn).
+  //
+  // With the block appended after the user message, the checkpoint covers the
+  // whole conversation and only the throwaway block itself is re-read.
+  event.messages.push(block)
 }
 
 // Real user messages only: skips injections wrapped in <system-reminder>
