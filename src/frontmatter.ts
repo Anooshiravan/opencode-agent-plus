@@ -37,7 +37,7 @@ const OPENCODE_KEYS = [
   "disabled",
   "request",
 ]
-const KNOWN = new Set([...OPENCODE_KEYS, "reminder", "on_error_command", "safe_commands", "max_word_repeat", "max_tool_repeat", "manual_green_light", "manual_green_light_words", "auto_green_light", "pondering", ...BODY, ...TEMPLATE_KWARGS])
+const KNOWN = new Set([...OPENCODE_KEYS, "reminder", "on_error_command", "safe_commands", "max_word_repeat", "max_tool_repeat", "manual_green_light", "manual_green_light_words", "auto_green_light", "pondering", "misplaced_tag_filter", "clockwork", ...BODY, ...TEMPLATE_KWARGS])
 
 export const read = (file: string) => readFile(file, "utf8").catch(() => "")
 
@@ -159,11 +159,19 @@ export async function problems(file: string, keys: Record<string, string>) {
     keys.pondering && !["on", "off"].includes(keys.pondering)
       ? [`pondering: must be on or off`]
       : []
+  const misplacedTagFilter =
+    keys.misplaced_tag_filter && !["on", "off"].includes(keys.misplaced_tag_filter)
+      ? [`misplaced_tag_filter: must be on or off`]
+      : []
+  const clockwork =
+    keys.clockwork && !["on", "off"].includes(keys.clockwork)
+      ? [`clockwork: must be on or off`]
+      : []
   const wrong = [...BODY, ...TEMPLATE_KWARGS]
     .filter((k) => k in keys)
     .flatMap((k) => {
       const result = requestValue(k, keys[k])
       return "error" in result ? [result.error] : []
     })
-  return [...misspelledKeys(keys), ...wrong, ...safeCommands, ...maxWordRepeat, ...maxToolRepeat, ...greenLight, ...autoGreenLight, ...pondering]
+  return [...misspelledKeys(keys), ...wrong, ...safeCommands, ...maxWordRepeat, ...maxToolRepeat, ...greenLight, ...autoGreenLight, ...pondering, ...misplacedTagFilter, ...clockwork]
 }

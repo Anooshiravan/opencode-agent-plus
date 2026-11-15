@@ -8,6 +8,8 @@ import { autoGreenLight } from "./autogreenlight"
 import { onErrorCommand } from "./onerrorcommand"
 import { httpRequest } from "./httprequest"
 import { pondering } from "./pondering"
+import { misplacedTagFilter } from "./misplacedtag"
+import { clockwork } from "./clockwork"
 
 // Server half: adds the agent's reminders to every model request and its settings to the request body.
 // The supported frontmatter keys are listed in frontmatter.ts and explained in README.md.
@@ -59,6 +61,12 @@ export default {
 
     // `pondering: on` — think during idle time; the result rides into the next user message.
     await pondering(ctx, { settings })
+
+    // `misplaced_tag_filter: on` — swap stray tag signs in thinking/message text for safe look-alikes.
+    await misplacedTagFilter(ctx, { settings })
+
+    // `clockwork: on` — deny all asks and keep the agent going on its own.
+    await clockwork(ctx, { settings })
 
     await ctx.session.hook("context", async (event: any) => {
       // A request got through: allow on_error_command to fire again next time.

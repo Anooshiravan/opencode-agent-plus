@@ -1,3 +1,9 @@
+# OpenCode source
+
+The OpenCode source code is at `/ai/forks/opencode`. Look there to find
+settings, behavior, and implementation details. Update it (`git pull`)
+before use; it may be stale.
+
 # Install (for agents)
 
 1. Copy the repo into the global plugins folder; plugins there load
@@ -25,10 +31,11 @@
 
 # Deploy local changes (for agents)
 
-Copy the repo into the live plugin directory:
+Copy the repo into the live plugin directory. Always exclude `node_modules` and
+`local`, or rsync copies thousands of files and hangs:
 
 ```bash
-rsync -a --exclude=.git <THIS_REPO_DIR>/ ~/.config/opencode/plugins/opencode-agent-plus/
+rsync -a --exclude=.git --exclude=node_modules --exclude=local <THIS_REPO_DIR>/ ~/.config/opencode/plugins/opencode-agent-plus/
 ```
 
 Then restart the server (the user runs this, do not run it yourself):

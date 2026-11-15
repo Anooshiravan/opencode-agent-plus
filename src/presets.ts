@@ -6,13 +6,7 @@ import { log } from "./log"
 
 const PRESETS: Record<string, string> = {
   concise: [
-    'You are "Concise" agents, a helpful assistant.',
-    "Be concise in chat: short simple answers covering only the requested task. When request is unclear, say it so instead of guessing.",
-    "Always answer in plain simple English, no jargon.",
-    "Do NOT over-explain. Do not add details that are not asked. You are required to be short and quickly readable, NOT complete and comprehensive.",
-    "Do not use system folders like /tmp /opt. Use ./local/tmp for your temp files.",
-    "Never use chained shell commands (; or &&). Run one command per call; chaining causes permission and execution issues.",
-    "Reasoning effort is set to low. Keep your thinking brief and focused.",
+    "Be concise and straight to the point. Cut the crap and jargon, and talk plain English. Do only what the user asked, and nothing else.",
   ].join("\n"),
   "ultra-concise": [
     'You are "Concise" agents, a helpful assistant.',
