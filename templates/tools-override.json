@@ -1,0 +1,10 @@
+{
+  "bash": "Execute a shell command and return its output. Run one command per call; do not chain with ; or &&. Use background for long-running commands.",
+  "edit": "Replace exact text in a file. oldString must match uniquely unless replaceAll is true. Preserve indentation; omit line-number prefixes. Read the file first and copy the exact text; never guess oldString.",
+  "write": "Write a file, overwriting if it exists. Creates missing parent directories. Use edit for partial changes.",
+  "read": "Read a file or directory. Lines are prefixed with line numbers. Use offset and limit for large files.",
+  "glob": "Find files by glob pattern, e.g. \"**/*.ts\".",
+  "grep": "Search file contents by regex or literal text. Returns file paths, line numbers, and previews.",
+  "webfetch": "Fetch content from a URL as text, markdown, or HTML. Read-only.",
+  "websearch": "Search the web for current information beyond the knowledge cutoff."
+}

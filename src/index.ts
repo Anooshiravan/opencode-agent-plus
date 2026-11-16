@@ -10,7 +10,7 @@ import { httpRequest } from "./httprequest"
 import { pondering } from "./pondering"
 import { misplacedTagFilter } from "./misplacedtag"
 import { clockwork } from "./clockwork"
-import { shortTools } from "./shorttools"
+import { toolOverrides } from "./tooloverrides"
 
 // Server half: adds the agent's reminders to every model request and its settings to the request body.
 // The supported frontmatter keys are listed in frontmatter.ts and explained in README.md.
@@ -74,7 +74,7 @@ export default {
       allowWake(event.sessionID)
       const { keys } = await settings(event.agent)
       await httpRequest(event, { settings })
-      await shortTools(event, { settings })
+      await toolOverrides(event, { settings })
       const text = await reminderText(directory, keys)
       if (!text) return
       appendBlock(event, "system-reminder", text)

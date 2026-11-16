@@ -26,6 +26,7 @@ function sidebarLines(keys: Record<string, string>) {
   lines.push(`pondering: ${onOff(keys.pondering)}`)
   lines.push(`misplaced_tag_filter: ${onOff(keys.misplaced_tag_filter)}`)
   lines.push(`clockwork: ${onOff(keys.clockwork)}`)
+  lines.push(`tools_override: ${keys.tools_override ? "on" : "off"}`)
   if ("reasoning_effort" in keys && "value" in requestValue("reasoning_effort", keys.reasoning_effort))
     lines.push(`reasoning_effort: ${keys.reasoning_effort}`)
   for (const k of BODY) {

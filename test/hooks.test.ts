@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test"
 import { maxToolRepeat } from "../src/repetition"
 import { manualGreenLight } from "../src/manualgreenlight"
-import { conversation, mockCtx } from "./mock-ctx"
+import { appendBlock } from "../src/context"
+import { conversation, mockCtx, user } from "./mock-ctx"
 
 const settings = (keys: Record<string, string>) => async () => ({ keys })
 
@@ -33,4 +34,15 @@ test("manual green light denies until the message ends with a go word", async ()
   const allowed = { agent: "a", action: "shell", resources: ["ls"], effect: "ask", sessionID: "s" }
   await ctx.permissionHandlers.evaluate(allowed)
   expect(allowed.effect).toBe("ask")
+})
+
+test("context blocks append after the user message, in hook order", () => {
+  const event: any = { messages: [user("hello")] }
+  // Same order as index.ts: pondering hook first, then the reminder hook.
+  appendBlock(event, "pondering", "p")
+  appendBlock(event, "system-reminder", "r")
+  const tags = event.messages.map((m: any) => m.content[0].text)
+  expect(tags[0]).toBe("hello")
+  expect(tags[1]).toContain("<pondering>")
+  expect(tags[2]).toContain("<system-reminder>")
 })

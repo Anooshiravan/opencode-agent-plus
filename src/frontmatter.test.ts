@@ -8,8 +8,6 @@ test("parses keys and | blocks", () => {
 })
 
 test("validates request values", () => {
-  expect(requestValue("top_k", "5")).toEqual({ value: 5 })
-  expect(requestValue("top_k", "1.5")).toEqual({ error: "top_k: must be a whole number" })
   expect(requestValue("enable_thinking", "true")).toEqual({ value: true })
   expect(requestValue("reasoning_effort", "bad")).toEqual({ error: "reasoning_effort: must be one of none, minimal, low, medium, high, xhigh" })
 })

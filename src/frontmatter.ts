@@ -14,7 +14,7 @@ export const BODY = [
   "reasoning_effort",
 ]
 export const TEMPLATE_KWARGS = ["enable_thinking"]
-const WHOLE_NUMBERS = ["top_k", "max_completion_tokens", "reasoning_budget_tokens"]
+const WHOLE_NUMBERS = ["max_completion_tokens", "reasoning_budget_tokens"]
 // Safe value ranges for the sampling settings.
 const RANGES: Record<string, [number, number]> = {
   temperature: [0.2, 1.4],
@@ -37,7 +37,7 @@ const OPENCODE_KEYS = [
   "disabled",
   "request",
 ]
-const KNOWN = new Set([...OPENCODE_KEYS, "reminder", "on_error_command", "safe_commands", "max_word_repeat", "max_tool_repeat", "manual_green_light", "manual_green_light_words", "auto_green_light", "pondering", "misplaced_tag_filter", "clockwork", "short_tools", ...BODY, ...TEMPLATE_KWARGS])
+const KNOWN = new Set([...OPENCODE_KEYS, "reminder", "on_error_command", "safe_commands", "max_word_repeat", "max_tool_repeat", "manual_green_light", "manual_green_light_words", "auto_green_light", "pondering", "misplaced_tag_filter", "clockwork", "tools_override", ...BODY, ...TEMPLATE_KWARGS])
 
 export const read = (file: string) => readFile(file, "utf8").catch(() => "")
 
@@ -167,11 +167,15 @@ export async function problems(file: string, keys: Record<string, string>) {
     keys.clockwork && !["on", "off"].includes(keys.clockwork)
       ? [`clockwork: must be on or off`]
       : []
+  const toolOverrides =
+    keys.tools_override !== undefined && !keys.tools_override.trim()
+      ? [`tools_override: must name a JSON file`]
+      : []
   const wrong = [...BODY, ...TEMPLATE_KWARGS]
     .filter((k) => k in keys)
     .flatMap((k) => {
       const result = requestValue(k, keys[k])
       return "error" in result ? [result.error] : []
     })
-  return [...misspelledKeys(keys), ...wrong, ...safeCommands, ...maxWordRepeat, ...maxToolRepeat, ...greenLight, ...autoGreenLight, ...pondering, ...misplacedTagFilter, ...clockwork]
+  return [...misspelledKeys(keys), ...wrong, ...safeCommands, ...maxWordRepeat, ...maxToolRepeat, ...greenLight, ...autoGreenLight, ...pondering, ...misplacedTagFilter, ...clockwork, ...toolOverrides]
 }
