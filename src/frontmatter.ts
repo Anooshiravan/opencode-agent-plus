@@ -37,7 +37,7 @@ const OPENCODE_KEYS = [
   "disabled",
   "request",
 ]
-const KNOWN = new Set([...OPENCODE_KEYS, "reminder", "on_error_command", "safe_commands", "max_word_repeat", "max_tool_repeat", "manual_green_light", "manual_green_light_words", "auto_green_light", "pondering", "misplaced_tag_filter", "clockwork", ...BODY, ...TEMPLATE_KWARGS])
+const KNOWN = new Set([...OPENCODE_KEYS, "reminder", "on_error_command", "safe_commands", "max_word_repeat", "max_tool_repeat", "manual_green_light", "manual_green_light_words", "auto_green_light", "pondering", "misplaced_tag_filter", "clockwork", "short_tools", ...BODY, ...TEMPLATE_KWARGS])
 
 export const read = (file: string) => readFile(file, "utf8").catch(() => "")
 

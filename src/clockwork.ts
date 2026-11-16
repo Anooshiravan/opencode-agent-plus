@@ -15,10 +15,20 @@ const META =
   "progress. Do not greet, do not ask questions, do not repeat prior work. " +
   "Reply with that one sentence only."
 
+const PLAN_META =
+  "You are nudging an autonomous coding agent that just stopped. Write ONE " +
+  "short imperative sentence telling it to read the project's plan document " +
+  "(PLAN.md, TODO.md, DESIGN.md or similar) and list the work that is still " +
+  "left. Do not greet, do not ask questions. Reply with that one sentence only."
+
+const nextTarget = () => 7 + Math.floor(Math.random() * 4) // 7, 8, 9 or 10
+
 export async function clockwork(ctx: any, { settings }: { settings: (agent: string) => Promise<{ keys: Record<string, string> }> }) {
-  const shared = ((globalThis as any).__agentPlusClockwork ??= { running: new Set<string>(), denied: new Set<string>() })
+  const shared = ((globalThis as any).__agentPlusClockwork ??= { running: new Set<string>(), denied: new Set<string>(), turns: new Map<string, number>(), targets: new Map<string, number>() })
   const running = shared.running as Set<string> // a keep-going prompt is in flight
   const denied = shared.denied as Set<string> // this turn had a denied ask
+  const turns = shared.turns as Map<string, number> // turns since last plan check
+  const targets = shared.targets as Map<string, number> // when the next plan check fires
 
   // Deny every permission ask for clockwork agents.
   await ctx.permission.hook("evaluate", async (event: any) => {
@@ -49,7 +59,13 @@ export async function clockwork(ctx: any, { settings }: { settings: (agent: stri
         running.add(sessionID)
         const wasDenied = denied.delete(sessionID)
 
-        const { text: next } = await ctx.session.generate({ sessionID, prompt: META })
+        const count = (turns.get(sessionID) ?? 0) + 1
+        const target = targets.get(sessionID) ?? nextTarget()
+        const checkPlan = count >= target
+        turns.set(sessionID, checkPlan ? 0 : count)
+        if (checkPlan) targets.set(sessionID, nextTarget())
+
+        const { text: next } = await ctx.session.generate({ sessionID, prompt: checkPlan ? PLAN_META : META })
         const text = String(next).trim() || FALLBACK
 
         const final = wasDenied ? `Request is rejected. ${text}` : text

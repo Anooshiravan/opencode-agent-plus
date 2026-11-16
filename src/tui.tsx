@@ -87,8 +87,17 @@ export default {
           async ({ agent }) => sidebarLines(frontmatter((await agentFile(directory, agent)).text)),
         )
         // Live line: spinner while pondering, "on (idle)" when enabled and done, "off" when disabled.
+        const cacheLine = createMemo(() => {
+          const msgs = ctx.data.session.message.list(props.sessionID) ?? []
+          const last = [...msgs].reverse().find((m: any) => m.type === "assistant" && m.tokens)
+          if (!last) return "cache: -"
+          const t = last.tokens
+          const total = t.input + t.cache.read
+          const pct = total > 0 ? ((t.cache.read / total) * 100).toFixed(1) : "0.0"
+          return `cache: ${pct}% (cached: ${t.cache.read} token · new: ${t.input} token)`
+        })
         const shown = createMemo(() => {
-          const ls = lines() ?? []
+          const ls = [...(lines() ?? []), cacheLine()]
           if (!ls.includes("pondering: on")) return ls
           const st = statuses()[props.sessionID]
           const busy = st?.state === "busy"
