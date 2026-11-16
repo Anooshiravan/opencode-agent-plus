@@ -236,12 +236,19 @@ it changes on disk, so the prompt cache stays warm.
 
 ## Clockwork
 
-With `clockwork: on`, the agent runs hands-off. Every permission ask is denied,
-and after each finished turn the plugin runs one quiet thinking request (like
-pondering) to write a fresh "keep going" message, then sends it. Every 7–10
-turns it instead nudges the agent to re-read its plan document (PLAN.md,
-TODO.md, etc.) and list remaining work. The session keeps working on its own
-until you stop it. Only agents with `clockwork: on` are affected.
+With `clockwork: on`, the agent runs hands-off. Every permission ask is denied.
+After each finished turn a judge request reads the plan and the work so far and
+replies with one word:
+
+- `CONTINUE` — the plugin sends a fresh "keep going" message. Every 7–10 turns
+  it instead nudges the agent to re-read its plan document (PLAN.md, TODO.md,
+  etc.) and list remaining work.
+- `WAIT` — the agent is waiting on a background job, so the plugin waits 30s
+  and judges again.
+- `DONE` — the plugin sends a wrap-up message. The next `DONE` sends a final
+  "JOB COMPLETED" line and stops the loop.
+
+Only agents with `clockwork: on` are affected.
 
 ## Notes
 

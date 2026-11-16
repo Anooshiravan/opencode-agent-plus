@@ -21,12 +21,26 @@ const PLAN_META =
   "(PLAN.md, TODO.md, DESIGN.md or similar) and list the work that is still " +
   "left. Do not greet, do not ask questions. Reply with that one sentence only."
 
+const JUDGE_META =
+  "Review the plan and the work done so far. Reply with ONE word: DONE, WAIT, " +
+  "or CONTINUE. Say DONE if every plan item is complete and the acting agent is " +
+  "asking to conclude. Say WAIT if the agent is waiting for a background job or " +
+  "long task to finish. Otherwise say CONTINUE."
+
+const WAIT_MS = 30_000
+
+const WRAPUP = "Wrap up now: summarize what was done and stop."
+
+const COMPLETED = "==================== CLOCKWORK: JOB COMPLETED ===================="
+
 const nextTarget = () => 7 + Math.floor(Math.random() * 4) // 7, 8, 9 or 10
 
 export async function clockwork(ctx: any, { settings }: { settings: (agent: string) => Promise<{ keys: Record<string, string> }> }) {
-  const shared = ((globalThis as any).__agentPlusClockwork ??= { running: new Set<string>(), denied: new Set<string>(), turns: new Map<string, number>(), targets: new Map<string, number>() })
+  const shared = ((globalThis as any).__agentPlusClockwork ??= { running: new Set<string>(), denied: new Set<string>(), stopped: new Set<string>(), wrapped: new Set<string>(), turns: new Map<string, number>(), targets: new Map<string, number>() })
   const running = shared.running as Set<string> // a keep-going prompt is in flight
   const denied = shared.denied as Set<string> // this turn had a denied ask
+  const stopped = shared.stopped as Set<string> // the judge said the work is done
+  const wrapped = shared.wrapped as Set<string> // already sent the wrap-up message
   const turns = shared.turns as Map<string, number> // turns since last plan check
   const targets = shared.targets as Map<string, number> // when the next plan check fires
 
@@ -56,8 +70,36 @@ export async function clockwork(ctx: any, { settings }: { settings: (agent: stri
         const session = await ctx.session.get({ sessionID })
         const { keys } = await settings(session.agent)
         if (keys.clockwork !== "on") continue
+        if (stopped.has(sessionID)) continue
         running.add(sessionID)
         const wasDenied = denied.delete(sessionID)
+
+        // Judge: is the work finished, or waiting on a job? Read-only, nothing saved.
+        // Empty reply means no verdict, so retry once. WAIT means pause and re-judge.
+        let verdict: unknown
+        for (;;) {
+          verdict = (await ctx.session.generate({ sessionID, prompt: JUDGE_META })).text
+          if (!String(verdict).trim()) {
+            log(`clockwork: judge empty, retrying session=${sessionID}`)
+            verdict = (await ctx.session.generate({ sessionID, prompt: JUDGE_META })).text
+          }
+          log(`clockwork: judge session=${sessionID} reply=${String(verdict).trim()}`)
+          if (!/\bWAIT\b/i.test(String(verdict))) break
+          log(`clockwork: waiting session=${sessionID} ${WAIT_MS}ms`)
+          await new Promise((r) => setTimeout(r, WAIT_MS))
+        }
+        if (/\bDONE\b/i.test(String(verdict))) {
+          if (!wrapped.has(sessionID)) {
+            wrapped.add(sessionID)
+            log(`clockwork: wrap-up session=${sessionID}`)
+            await ctx.session.prompt({ sessionID, text: WRAPUP, delivery: "steer" })
+            continue
+          }
+          stopped.add(sessionID)
+          log(`clockwork: finished session=${sessionID} verdict=${String(verdict).trim()}`)
+          await ctx.session.prompt({ sessionID, text: COMPLETED, delivery: "steer" })
+          continue
+        }
 
         const count = (turns.get(sessionID) ?? 0) + 1
         const target = targets.get(sessionID) ?? nextTarget()
